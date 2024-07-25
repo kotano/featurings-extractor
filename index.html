@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSON UUID Extractor</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        max-width: 600px;
+      }
+      textarea {
+        width: 100%;
+        height: 150px;
+        margin-bottom: 10px;
+      }
+      button {
+        margin: 10px 0;
+        padding: 10px 15px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .result {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+      }
+      .uuid-list {
+        list-style-type: none;
+        padding: 0;
+      }
+      .uuid-list li {
+        background-color: #e7e7e7;
+        margin: 5px 0;
+        padding: 5px;
+        border-radius: 4px;
+      }
+      .copy-button {
+        display: none;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+      }
+      .copy-button:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>JSON UUID Extractor</h1>
+    <p>
+      Paste your JSON data from
+      <code>https://cm-catalog-api.samokat.ru/featuringSets</code> below:
+    </p>
+
+    <textarea id="jsonInput" placeholder="Enter JSON data here..."></textarea>
+
+    <p>Enter target.value keys (one per line):</p>
+
+    <textarea
+      id="keysInput"
+      placeholder="Enter target.value keys, one per line..."
+    ></textarea>
+
+    <button onclick="extractUUIDs()">Extract UUIDs</button>
+
+    <div class="result" id="resultContainer">
+      <h2>Extracted UUIDs:</h2>
+      <ul id="uuidList" class="uuid-list"></ul>
+      <button id="copyButton" class="copy-button" onclick="copyUUIDs()">
+        Copy UUIDs to Clipboard
+      </button>
+    </div>
+
+    <script>
+      // Load saved data from local storage when the page loads
+      window.onload = function () {
+        const savedJson = localStorage.getItem('jsonData');
+        const savedKeys = localStorage.getItem('keysData');
+        const savedUUIDs = localStorage.getItem('uuidData');
+
+        if (savedJson) {
+          document.getElementById('jsonInput').value = savedJson;
+        }
+        if (savedKeys) {
+          document.getElementById('keysInput').value = savedKeys;
+        }
+        if (savedUUIDs) {
+          const uuids = savedUUIDs.split(',');
+          displayUUIDs(uuids);
+        }
+      };
+
+      function extractUUIDs() {
+        const jsonInput = document.getElementById('jsonInput').value;
+        const keysInput = document.getElementById('keysInput').value;
+        const keys = keysInput
+          .split('\n')
+          .map((key) => key.trim())
+          .filter((key) => key.length > 0);
+
+        let jsonData;
+        try {
+          jsonData = JSON.parse(jsonInput);
+        } catch (error) {
+          alert('Invalid JSON format. Please check your input.');
+          return;
+        }
+
+        if (!jsonData.items) {
+          alert('The JSON data must contain an "items" array.');
+          return;
+        }
+
+        const matchingUUIDs = jsonData.items
+          .filter((item) => keys.includes(item.target.value))
+          .map((item) => item.uuid);
+
+        displayUUIDs(matchingUUIDs);
+
+        // Save data to local storage
+        localStorage.setItem('jsonData', jsonInput);
+        localStorage.setItem('keysData', keysInput);
+        localStorage.setItem('uuidData', matchingUUIDs.join(','));
+      }
+
+      function displayUUIDs(uuids) {
+        const uuidList = document.getElementById('uuidList');
+        const copyButton = document.getElementById('copyButton');
+        uuidList.innerHTML = ''; // Clear existing list
+
+        if (uuids.length === 0) {
+          uuidList.innerHTML = '<li>No matching UUIDs found.</li>';
+          copyButton.style.display = 'none';
+        } else {
+          uuids.forEach((uuid) => {
+            const li = document.createElement('li');
+            li.textContent = uuid;
+            uuidList.appendChild(li);
+          });
+          copyButton.style.display = 'block';
+        }
+      }
+
+      function copyUUIDs() {
+        const uuidListItems = document.querySelectorAll('#uuidList li');
+        const uuids = Array.from(uuidListItems)
+          .map((item) => item.textContent)
+          .join('\n');
+
+        navigator.clipboard
+          .writeText(uuids)
+          .then(() => {
+            alert('UUIDs copied to clipboard!');
+          })
+          .catch((err) => {
+            console.error('Error copying text: ', err);
+          });
+      }
+    </script>
+  </body>
+</html>
